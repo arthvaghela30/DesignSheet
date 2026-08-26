@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DESIGNSHEET — Machine Element Design Calculator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:        #12161a;
+    --panel:     #181d22;
+    --panel-2:   #1e242a;
+    --line:      #2b333a;
+    --line-lit:  #3a4750;
+    --paper:     #e7e9ea;
+    --dim:       #8b939b;
+    --dimmer:    #5c6570;
+    --blue:      #4fb3e8;
+    --blue-dim:  #1f4a5c;
+    --green:     #4c9f70;
+    --amber:     #d99a2b;
+    --red:       #d6544a;
+    --mono: 'JetBrains Mono', monospace;
+    --disp: 'Oswald', sans-serif;
+    --body: 'Inter', sans-serif;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{ background:var(--bg); color:var(--paper); font-family:var(--body); min-height:100vh; }
+  body::before{
+    content:""; position:fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.028) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.028) 1px, transparent 1px);
+    background-size: 32px 32px; pointer-events:none; z-index:0;
+  }
+  .app{ display:grid; grid-template-columns:242px 1fr; min-height:100vh; position:relative; z-index:1; }
+
+  /* SIDEBAR */
+  .sidebar{ background:var(--panel); border-right:1px solid var(--line); display:flex; flex-direction:column; }
+  .brand{ padding:26px 22px 20px; border-bottom:1px solid var(--line); }
+  .brand .mark{ display:flex; align-items:center; gap:10px; margin-bottom:4px; }
+  .brand .mark .dot{ width:9px; height:9px; background:var(--blue); border-radius:1px; box-shadow:0 0 8px rgba(79,179,232,0.55); }
+  .brand h1{ font-family:var(--disp); font-weight:700; font-size:18px; letter-spacing:1.5px; color:var(--paper); }
+  .brand p{ font-family:var(--mono); font-size:9px; letter-spacing:1.3px; color:var(--dimmer); margin-top:6px; text-transform:uppercase; }
+  nav{ padding:14px 10px; flex:1; }
+  .nav-label{ font-family:var(--mono); font-size:9.5px; color:var(--dimmer); letter-spacing:1.5px; padding:10px 12px 6px; text-transform:uppercase; }
+  .nav-btn{ width:100%; display:flex; align-items:center; gap:11px; background:transparent; border:none; color:var(--dim);
+    font-family:var(--mono); font-size:11.5px; letter-spacing:0.3px; text-align:left; padding:10px 12px; border-radius:3px; cursor:pointer; border-left:2px solid transparent; }
+  .nav-btn .num{ color:var(--dimmer); font-size:10.5px; width:20px; }
+  .nav-btn:hover{ background:var(--panel-2); color:var(--paper); }
+  .nav-btn.active{ background:var(--panel-2); color:var(--blue); border-left:2px solid var(--blue); }
+  .nav-btn.active .num{ color:var(--blue); }
+  .sidebar-foot{ padding:16px 22px; border-top:1px solid var(--line); font-family:var(--mono); font-size:9px; color:var(--dimmer); letter-spacing:0.4px; }
+  .sidebar-foot span{ color:var(--blue); }
+
+  /* MAIN */
+  main{ padding:30px 40px 60px; }
+  .topbar{ margin-bottom:24px; padding-bottom:16px; border-bottom:1px solid var(--line); }
+  .topbar h2{ font-family:var(--disp); font-size:25px; font-weight:600; letter-spacing:0.4px; }
+  .topbar .sub{ font-family:var(--mono); font-size:11px; color:var(--dim); margin-top:4px; }
+
+  .view{ display:none; }
+  .view.active{ display:block; animation:fade .25s ease; }
+  @keyframes fade{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);} }
+
+  .layout{ display:grid; grid-template-columns:400px 1fr; gap:24px; align-items:start; }
+  @media(max-width:980px){ .layout{ grid-template-columns:1fr; } }
+
+  /* SPEC CARD */
+  .spec-card{ position:relative; background:var(--panel); border:1px solid var(--line); padding:20px 22px; }
+  .spec-card::before, .spec-card::after, .spec-card .cb1, .spec-card .cb2{
+    content:""; position:absolute; width:9px; height:9px; border-color:var(--blue-dim); border-style:solid; border-width:0; }
+  .spec-card::before{ top:-1px; left:-1px; border-top-width:2px; border-left-width:2px; }
+  .spec-card::after{ top:-1px; right:-1px; border-top-width:2px; border-right-width:2px; }
+  .spec-card .cb1{ bottom:-1px; left:-1px; border-bottom-width:2px; border-left-width:2px; }
+  .spec-card .cb2{ bottom:-1px; right:-1px; border-bottom-width:2px; border-right-width:2px; }
+
+  .formula-tag{ font-family:var(--mono); font-size:11px; color:var(--blue); background:rgba(79,179,232,0.08); border:1px solid var(--blue-dim); padding:8px 12px; margin-bottom:18px; letter-spacing:0.3px; }
+
+  .field{ margin-bottom:15px; }
+  .field label{ display:block; font-family:var(--mono); font-size:9.5px; letter-spacing:1px; color:var(--dim); text-transform:uppercase; margin-bottom:7px; }
+  .field input, .field select{ width:100%; background:var(--panel-2); border:1px solid var(--line-lit); color:var(--paper);
+    font-family:var(--mono); font-size:13px; padding:10px 12px; outline:none; }
+  .field input:focus, .field select:focus{ border-color:var(--blue); }
+
+  .btn{ font-family:var(--mono); font-size:11.5px; letter-spacing:1px; text-transform:uppercase; background:var(--blue); color:#08191f;
+    border:none; padding:11px 20px; cursor:pointer; font-weight:600; width:100%; margin-top:4px; }
+  .btn:hover{ filter:brightness(1.1); }
+
+  /* RESULT PANEL */
+  .result-empty{ font-family:var(--mono); font-size:12px; color:var(--dimmer); padding:60px 20px; text-align:center; border:1px dashed var(--line-lit); }
+
+  .report{ position:relative; }
+  .report-head{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid var(--line-lit); }
+  .report-head h3{ font-family:var(--disp); font-size:20px; letter-spacing:0.4px; }
+  .status-pill{ font-family:var(--mono); font-size:10.5px; letter-spacing:1px; padding:5px 12px; border:1px solid; text-transform:uppercase; }
+  .status-pill.safe{ color:var(--green); border-color:var(--green); background:rgba(76,159,112,0.08); }
+  .status-pill.warn{ color:var(--amber); border-color:var(--amber); background:rgba(217,154,43,0.08); }
+  .status-pill.fail{ color:var(--red); border-color:var(--red); background:rgba(214,84,74,0.08); }
+  .status-pill.neutral{ color:var(--blue); border-color:var(--blue); background:rgba(79,179,232,0.08); }
+
+  .report-row{ display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--line); font-family:var(--mono); font-size:12.5px; }
+  .report-row .k{ color:var(--dim); }
+  .report-row .v{ color:var(--paper); font-weight:500; }
+  .report-row.highlight .v{ color:var(--blue); font-size:15px; font-weight:600; }
+
+  /* TITLE BLOCK - signature element */
+  .title-block{ margin-top:22px; border:1px solid var(--line-lit); font-family:var(--mono); font-size:10px; }
+  .tb-top{ display:grid; grid-template-columns:1fr 1fr 1fr 1fr; }
+  .tb-top div{ padding:9px 12px; border-right:1px solid var(--line-lit); border-bottom:1px solid var(--line-lit); }
+  .tb-top div:last-child{ border-right:none; }
+  .tb-label{ color:var(--dimmer); letter-spacing:0.8px; text-transform:uppercase; font-size:8.5px; margin-bottom:4px; }
+  .tb-val{ color:var(--paper); font-size:11px; }
+  .tb-val.status-safe{ color:var(--green); }
+  .tb-val.status-warn{ color:var(--amber); }
+  .tb-val.status-fail{ color:var(--red); }
+  .tb-bottom{ display:flex; justify-content:space-between; padding:8px 12px; color:var(--dimmer); font-size:9px; letter-spacing:0.5px; }
+
+  /* MATERIALS TABLE */
+  table{ width:100%; border-collapse:collapse; }
+  th{ font-family:var(--mono); font-size:9.5px; color:var(--dimmer); text-transform:uppercase; letter-spacing:1px; text-align:left; padding:10px 12px; border-bottom:1px solid var(--line-lit); }
+  td{ font-family:var(--mono); font-size:12px; padding:11px 12px; border-bottom:1px solid var(--line); }
+  tbody tr:hover{ background:var(--panel-2); }
+
+  .note{ font-family:var(--mono); font-size:10.5px; color:var(--dimmer); margin-top:10px; letter-spacing:0.3px; line-height:1.5; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="mark"><div class="dot"></div><h1>DESIGNSHEET</h1></div>
+      <p>Machine Element Design Calc</p>
+    </div>
+    <nav id="nav">
+      <div class="nav-label">Reference</div>
+      <button class="nav-btn active" data-view="materials"><span class="num">00</span> Materials Database</button>
+      <div class="nav-label">Calculators</div>
+      <button class="nav-btn" data-view="shaft"><span class="num">01</span> Shaft Design</button>
+      <button class="nav-btn" data-view="bolt"><span class="num">02</span> Bolt Design</button>
+      <button class="nav-btn" data-view="key"><span class="num">03</span> Key Design</button>
+      <button class="nav-btn" data-view="spring"><span class="num">04</span> Spring Design</button>
+      <button class="nav-btn" data-view="failure"><span class="num">05</span> Failure Analysis</button>
+      <button class="nav-btn" data-view="material"><span class="num">06</span> Material Analysis</button>
+    </nav>
+    <div class="sidebar-foot">FOS KEY <span>&lt;1 FAIL · &lt;2 WARN · ≥2 SAFE</span></div>
+  </aside>
+
+  <main>
+    <div class="topbar">
+      <h2 id="viewTitle">Materials Database</h2>
+      <div class="sub" id="viewSub">Reference properties for all available materials</div>
+    </div>
+
+    <!-- MATERIALS DATABASE -->
+    <section class="view active" id="v-materials">
+      <div class="spec-card"><span class="cb1"></span><span class="cb2"></span>
+        <table>
+          <thead><tr><th>Material</th><th>Yield Strength</th><th>Shear Strength</th><th>Density</th><th>Young's Modulus</th></tr></thead>
+          <tbody id="matTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SHAFT -->
+    <section class="view" id="v-shaft">
+      <div class="layout">
+        <div class="spec-card"><span class="cb1"></span><span class="cb2"></span>
+          <div class="formula-tag">d = ( 16T / πτ<sub>allow</sub> )<sup>1/3</sup></div>
+          <div class="field"><label>Material</label><select id="shaftMat"></select></div>
+          <div class="field"><label>Torque (N·mm)</label><input id="shaftTorque" type="number" placeholder="e.g. 50000"></div>
+          <div class="field"><label>Factor of Safety</label><input id="shaftFos" type="number" step="0.1" placeholder="e.g. 2.5"></div>
+          <button class="btn" onclick="calcShaft()">Generate Design Report</button>
+        </div>
+        <div id="shaftResult"><div class="result-empty">Enter parameters and generate a report.</div></div>
+      </div>
+    </section>
+
+    <!-- BOLT -->
+    <section class="view" id="v-bolt">
+      <div class="layout">
+        <div class="spec-card"><span class="cb1"></span><span class="cb2"></span>
+          <div class="formula-tag">A<sub>req</sub> = F / σ<sub>allow</sub></div>
+          <div class="field"><label>Material</label><select id="boltMat"></select></div>
+          <div class="field"><label>Axial Force (N)</label><input id="boltForce" type="number" placeholder="e.g. 8000"></div>
+          <div class="field"><label>Factor of Safety</label><input id="boltFos" type="number" step="0.1" placeholder="e.g. 3"></div>
+          <button class="btn" onclick="calcBolt()">Generate Design Report</button>
+        </div>
+        <div id="boltResult"><div class="result-empty">Enter parameters and generate a report.</div></div>
+      </div>
+    </section>
+
+    <!-- KEY -->
+    <section class="view" id="v-key">
+      <div class="layout">
+        <div class="spec-card"><span class="cb1"></span><span class="cb2"></span>
+          <div class="formula-tag">τ = 2T / (d·w·L) | σ<sub>c</sub> = 4T / (d·h·L)</div>
+          <div class="field"><label>Material</label><select id="keyMat"></select></div>
+          <div class="field"><label>Torque (N·mm)</label><input id="keyTorque" type="number" placeholder="e.g. 50000"></div>
+          <div class="field"><label>Shaft Diameter (mm)</label><input id="keyShaftDia" type="number" placeholder="e.g. 30"></div>
+          <div class="field"><label>Key Length (mm)</label><input id="keyLength" type="number" placeholder="e.g. 40"></div>
+          <div class="field"><label>Key Width (mm)</label><input id="keyWidth" type="number" placeholder="e.g. 10"></div>
+          <div class="field"><label>Key Height (mm)</label><input id="keyHeight" type="number" placeholder="e.g. 8"></div>
+          <div class="field"><label>Factor of Safety</label><input id="keyFos" type="number" step="0.1" placeholder="e.g. 2"></div>
+          <button class="btn" onclick="calcKey()">Generate Design Report</button>
+        </div>
+        <div id="keyResult"><div class="result-empty">Enter parameters and generate a report.</div></div>
+      </div>
+    </section>
+
+    <!-- SPRING -->
+    <section class="view" id="v-spring">
+      <div class="layout">
+        <div class="spec-card"><span class="cb1"></span><span class="cb2"></span>
+          <div class="formula-tag">τ<sub>raw</sub> = 8FD / πd<sub>w</sub>³ &nbsp;·&nbsp; τ<sub>corr</sub> = K<sub>w</sub> · τ<sub>raw</sub></div>
+          <div class="field"><label>Material</label><select id="springMat"></select></div>
+          <div class="field"><label>Load (N)</label><input id="springLoad" type="number" placeholder="e.g. 500"></div>
+          <div class="field"><label>Spring Diameter (mm)</label><input id="springDia" type="number" placeholder="e.g. 25"></div>
+          <div class="field"><label>Wire Diameter (mm)</label><input id="wireDia" type="number" placeholder="e.g. 4"></div>
+          <div class="field"><label>Factor of Safety</label><input id="springFos" type="number" step="0.1" placeholder="e.g. 1.5"></div>
+          <button class="btn" onclick="calcSpring()">Generate Design Report</button>
+        </div>
+        <div id="springResult"><div class="result-empty">Enter parameters and generate a report.</div></div>
+      </div>
+    </section>
+
+    <!-- FAILURE ANALYSIS -->
+    <section class="view" id="v-failure">
+      <div class="layout">
+        <div class="spec-card"><span class="cb1"></span><span class="cb2"></span>
+          <div class="formula-tag">FOS = σ<sub>yield</sub> / σ<sub>applied</sub></div>
+          <div class="field"><label>Material</label><select id="failMat"></select></div>
+          <div class="field"><label>Applied Stress (MPa)</label><input id="failStress" type="number" placeholder="e.g. 150"></div>
+          <button class="btn" onclick="calcFailure()">Run Failure Check</button>
+        </div>
+        <div id="failResult"><div class="result-empty">Enter parameters and run a check.</div></div>
+      </div>
+    </section>
+
+    <!-- MATERIAL ANALYSIS -->
+    <section class="view" id="v-material">
+      <div class="layout">
+        <div class="spec-card"><span class="cb1"></span><span class="cb2"></span>
+          <div class="formula-tag">FOS = σ<sub>yield</sub> / σ<sub>applied</sub></div>
+          <div class="field"><label>Material</label><select id="manMat"></select></div>
+          <div class="field"><label>Applied Stress (MPa)</label><input id="manStress" type="number" placeholder="e.g. 150"></div>
+          <button class="btn" onclick="calcMaterialAnalysis()">Generate Full Report</button>
+        </div>
+        <div id="manResult"><div class="result-empty">Enter parameters and generate a report.</div></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+// ---------------- DATA (from material_database.py — "ALUMINIUM ALLOY" spelling corrected) ----------------
+const materials = {
+  "MILD STEEL":       { yield_strength:250, shear_strength:145, density:7850, youngs_modulus:200000 },
+  "STAINLESS STEEL":  { yield_strength:300, shear_strength:180, density:8000, youngs_modulus:193000 },
+  "ALLOY STEEL":      { yield_strength:400, shear_strength:250, density:7850, youngs_modulus:210000 },
+  "ALUMINIUM ALLOY":  { yield_strength:200, shear_strength:120, density:2700, youngs_modulus:69000 },
+  "TITANIUM ALLOY":   { yield_strength:830, shear_strength:480, density:4500, youngs_modulus:116000 },
+  "MAGNESIUM ALLOY":  { yield_strength:200, shear_strength:115, density:1740, youngs_modulus:45000 },
+  "COPPER":           { yield_strength:70,  shear_strength:40,  density:8960, youngs_modulus:110000 },
+  "BRASS":            { yield_strength:200, shear_strength:115, density:8500, youngs_modulus:100000 },
+  "BRONZE":           { yield_strength:220, shear_strength:130, density:8800, youngs_modulus:105000 }
+};
+
+const R20_BASE = [1.00, 1.12, 1.25, 1.40, 1.60, 1.80, 2.00, 2.24, 2.50, 2.80, 3.15, 3.55, 4.00, 4.50, 5.00, 5.60, 6.30, 7.10, 8.00, 9.00];
+const PREFERRED_DIAMETERS = [];
+[1, 10, 100, 1000].forEach(mult => {
+  R20_BASE.forEach(v => PREFERRED_DIAMETERS.push(parseFloat((v * mult).toFixed(2))));
+});
+function nearestStandardDiameter(calc) {
+  for (let d of PREFERRED_DIAMETERS) {
+    if (d >= calc) return d;
+  }
+  return PREFERRED_DIAMETERS[PREFERRED_DIAMETERS.length - 1];
+}
+
+const BOLT_TABLE = [
+  [6, 20.1], [8, 36.6], [10, 58.0], [12, 84.3],
+  [14, 115], [16, 157], [18, 192], [20, 245],
+  [22, 303], [24, 353], [27, 459], [30, 561],
+  [33, 694], [36, 817]
+];
+
+// ---------------- NAV ----------------
+const titles = {
+  materials:["Materials Database","Reference properties for all available materials"],
+  shaft:["Shaft Design","Torsion-based shaft diameter sizing"],
+  bolt:["Bolt Design","Axial tension bolt sizing to standard sizes"],
+  key:["Key Design","Shaft key width sizing from torque"],
+  spring:["Spring Design","Helical spring stress and Wahl factor"],
+  failure:["Failure Analysis","Quick factor-of-safety check against yield"],
+  material:["Material Analysis","Full material report with FOS evaluation"]
+};
+document.getElementById('nav').addEventListener('click', e=>{
+  const btn = e.target.closest('.nav-btn');
+  if(!btn) return;
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const view = btn.dataset.view;
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('v-'+view).classList.add('active');
+  document.getElementById('viewTitle').textContent = titles[view][0];
+  document.getElementById('viewSub').textContent = titles[view][1];
+});
+
+// ---------------- INIT ----------------
+function populateMaterialSelects(){
+  const opts = Object.keys(materials).map(m=>`<option value="${m}">${m}</option>`).join('');
+  ['shaftMat','boltMat','keyMat','springMat','failMat','manMat'].forEach(id=>{
+    document.getElementById(id).innerHTML = opts;
+  });
+}
+function renderMaterialsTable(){
+  document.getElementById('matTableBody').innerHTML = Object.entries(materials).map(([name,m])=>`
+    <tr><td>${name}</td><td>${m.yield_strength} MPa</td><td>${m.shear_strength} MPa</td>
+    <td>${m.density} kg/m³</td><td>${m.youngs_modulus.toLocaleString()} MPa</td></tr>`).join('');
+}
+populateMaterialSelects();
+renderMaterialsTable();
+
+// ---------------- HELPERS ----------------
+function fosStatus(fos){
+  if(fos < 1) return {cls:'fail', label:'FAILURE — MATERIAL WILL FAIL'};
+  if(fos < 2) return {cls:'warn', label:'WARNING — DESIGN IS RISKY'};
+  return {cls:'safe', label:'SAFE — DESIGN ACCEPTABLE'};
+}
+function titleBlock(component, material, fos, statusCls, statusLabel){
+  return `<div class="title-block">
+    <div class="tb-top">
+      <div><div class="tb-label">Component</div><div class="tb-val">${component}</div></div>
+      <div><div class="tb-label">Material</div><div class="tb-val">${material}</div></div>
+      <div><div class="tb-label">F.O.S.</div><div class="tb-val">${fos}</div></div>
+      <div><div class="tb-label">Status</div><div class="tb-val status-${statusCls}">${statusCls.toUpperCase()}</div></div>
+    </div>
+    <div class="tb-bottom"><span>DESIGNSHEET / CALC</span><span>${new Date().toLocaleDateString()}</span></div>
+  </div>`;
+}
+function row(k,v,hi){ return `<div class="report-row ${hi?'highlight':''}"><span class="k">${k}</span><span class="v">${v}</span></div>`; }
+
+// ---------------- 1. SHAFT DESIGN ----------------
+function calcShaft(){
+  const matName = document.getElementById('shaftMat').value;
+  const torque = parseFloat(document.getElementById('shaftTorque').value);
+  const fos = parseFloat(document.getElementById('shaftFos').value);
+  const out = document.getElementById('shaftResult');
+  if(isNaN(torque) || isNaN(fos) || fos<=0 || torque<=0){ out.innerHTML = '<div class="result-empty">Enter valid positive values.</div>'; return; }
+
+  const shear = materials[matName].shear_strength;
+  const allowable = shear / fos;
+  const diameter = Math.cbrt((16*torque) / (Math.PI*allowable));
+  const standardDia = nearestStandardDiameter(diameter);
+  
+  const actualStress = (16 * torque) / (Math.PI * Math.pow(standardDia, 3));
+  const actualFos = shear / actualStress;
+  const safe = actualFos >= fos;
+
+  out.innerHTML = `<div class="spec-card report"><span class="cb1"></span><span class="cb2"></span>
+    <div class="report-head"><h3>Shaft Design Report</h3><span class="status-pill neutral">TORSION</span></div>
+    ${row('Material', matName)}
+    ${row('Torque', torque + ' N·mm')}
+    ${row('Required FOS', fos)}
+    ${row('Allowable Shear Stress', allowable.toFixed(2) + ' MPa')}
+    ${row('Required Theoretical Diameter', diameter.toFixed(2) + ' mm')}
+    ${row('Selected Standard Diameter', standardDia.toFixed(1) + ' mm', true)}
+    ${row('Actual Stress', actualStress.toFixed(2) + ' MPa')}
+    ${row('Actual FOS', actualFos.toFixed(2), true)}
+    ${titleBlock('Shaft', matName, actualFos.toFixed(2), safe?'safe':'fail', safe?'SAFE DESIGN':'DESIGN NOT SAFE')}
+  </div>`;
+}
+
+// ---------------- 2. BOLT DESIGN ----------------
+function calcBolt(){
+  const matName = document.getElementById('boltMat').value;
+  const force = parseFloat(document.getElementById('boltForce').value);
+  const fos = parseFloat(document.getElementById('boltFos').value);
+  const out = document.getElementById('boltResult');
+  if(isNaN(force) || isNaN(fos) || fos<=0 || force<=0){ out.innerHTML = '<div class="result-empty">Enter valid positive values.</div>'; return; }
+
+  const yieldS = materials[matName].yield_strength;
+  const allowable = yieldS / fos;
+  const aReq = force / allowable;
+  
+  const boltMatch = BOLT_TABLE.find(b => b[1] >= aReq);
+
+  let resultHtml = `<div class="spec-card report"><span class="cb1"></span><span class="cb2"></span>
+    <div class="report-head"><h3>Bolt Design Report</h3><span class="status-pill neutral">TENSION</span></div>
+    ${row('Material', matName)}
+    ${row('Axial Force', force + ' N')}
+    ${row('Required FOS', fos)}
+    ${row('Allowable Tensile Stress', allowable.toFixed(2) + ' MPa')}
+    ${row('Required Tensile Stress Area', aReq.toFixed(2) + ' mm²')}
+  `;
+  
+  if (boltMatch) {
+    const [size, area] = boltMatch;
+    const actualFos = (area * yieldS) / force;
+    resultHtml += `
+      ${row('Recommended Bolt Size', 'M' + size, true)}
+      ${row('Selected Tensile Area', area + ' mm²')}
+      ${row('Actual FOS', actualFos.toFixed(2), true)}
+      ${titleBlock('Bolt', matName, actualFos.toFixed(2), 'safe', 'SAFE DESIGN')}
+    `;
+  } else {
+    resultHtml += `
+      ${row('Recommended Bolt Size', 'Exceeds largest standard (M36) — reduce load or FOS', true)}
+      ${titleBlock('Bolt', matName, 'FAIL', 'fail', 'DESIGN NOT SAFE')}
+    `;
+  }
+  
+  resultHtml += `<div class="note">Note: This simplified bolt calculation considers static axial tension only. Bolt preload, joint separation, fatigue, eccentric loading, thread stripping, and combined loading are not evaluated.</div></div>`;
+  out.innerHTML = resultHtml;
+}
+
+// ---------------- 3. KEY DESIGN ----------------
+function calcKey(){
+  const matName = document.getElementById('keyMat').value;
+  const torque = parseFloat(document.getElementById('keyTorque').value);
+  const shaftDia = parseFloat(document.getElementById('keyShaftDia').value);
+  const keyLength = parseFloat(document.getElementById('keyLength').value);
+  const keyWidth = parseFloat(document.getElementById('keyWidth').value);
+  const keyHeight = parseFloat(document.getElementById('keyHeight').value);
+  const fos = parseFloat(document.getElementById('keyFos').value);
+  const out = document.getElementById('keyResult');
+  if([torque,shaftDia,keyLength,keyWidth,keyHeight,fos].some(v=>isNaN(v)||v<=0)){
+    out.innerHTML = '<div class="result-empty">Enter valid, positive values for all fields.</div>'; return;
+  }
+
+  const shearS = materials[matName].shear_strength;
+  const yieldS = materials[matName].yield_strength;
+  const allowShear = shearS / fos;
+  const allowCrush = yieldS / fos;
+
+  const shearStress = (2 * torque) / (shaftDia * keyWidth * keyLength);
+  const crushStress = (4 * torque) / (shaftDia * keyHeight * keyLength);
+  
+  const shearFos = shearS / shearStress;
+  const crushFos = yieldS / crushStress;
+  const govFos = Math.min(shearFos, crushFos);
+  const safe = govFos >= fos;
+
+  out.innerHTML = `<div class="spec-card report"><span class="cb1"></span><span class="cb2"></span>
+    <div class="report-head"><h3>Key Design Report</h3><span class="status-pill neutral">SHEAR & CRUSHING</span></div>
+    ${row('Material', matName)}
+    ${row('Torque', torque + ' N·mm')}
+    ${row('Key Dims (L×W×H)', `${keyLength} × ${keyWidth} × ${keyHeight} mm`)}
+    ${row('Required FOS', fos)}
+    
+    ${row('Shear Stress', shearStress.toFixed(2) + ' MPa')}
+    ${row('Allowable Shear', allowShear.toFixed(2) + ' MPa')}
+    ${row('Shear FOS', shearFos.toFixed(2), true)}
+    
+    ${row('Crushing Stress', crushStress.toFixed(2) + ' MPa')}
+    ${row('Allowable Crushing', allowCrush.toFixed(2) + ' MPa')}
+    ${row('Crushing FOS', crushFos.toFixed(2), true)}
+    
+    ${row('Governing FOS', govFos.toFixed(2), true)}
+    ${titleBlock('Key', matName, govFos.toFixed(2), safe?'safe':'fail', safe?'SAFE':'NOT SAFE')}
+    <div class="note">Simplified assumption: allowable crushing stress = material yield strength.</div>
+  </div>`;
+}
+
+// ---------------- 4. SPRING DESIGN ----------------
+function calcSpring(){
+  const matName = document.getElementById('springMat').value;
+  const load = parseFloat(document.getElementById('springLoad').value);
+  const springDia = parseFloat(document.getElementById('springDia').value);
+  const wireDia = parseFloat(document.getElementById('wireDia').value);
+  const fos = parseFloat(document.getElementById('springFos').value);
+  const out = document.getElementById('springResult');
+  if([load,springDia,wireDia,fos].some(v=>isNaN(v)||v<=0)){
+    out.innerHTML = '<div class="result-empty">Enter valid, positive values for all fields.</div>'; return;
+  }
+  const springIndex = springDia / wireDia;
+  if(springIndex <= 1){
+    out.innerHTML = '<div class="result-empty">Spring diameter must be greater than wire diameter (spring index must exceed 1).</div>'; return;
+  }
+
+  const shear = materials[matName].shear_strength;
+  const allowable = shear / fos;
+  
+  const rawStress = (8*load*springDia) / (Math.PI*Math.pow(wireDia,3));
+  const wahl = ((4*springIndex-1)/(4*springIndex-4)) + (0.615/springIndex);
+  const correctedStress = wahl * rawStress;
+  const actualFos = shear / correctedStress;
+  const safe = actualFos >= fos;
+
+  let warningHtml = '';
+  if (springIndex < 4 || springIndex > 12) {
+    warningHtml = `<div class="note" style="color:var(--amber);">WARNING: Spring index C should ideally be between 4 and 12.</div>`;
+  }
+
+  out.innerHTML = `<div class="spec-card report"><span class="cb1"></span><span class="cb2"></span>
+    <div class="report-head"><h3>Spring Design Report</h3><span class="status-pill ${safe?'safe':'fail'}">${safe?'SAFE DESIGN':'DESIGN NOT SAFE'}</span></div>
+    ${row('Material', matName)}
+    ${row('Load', load + ' N')}
+    ${row('Spring Diameter', springDia + ' mm')}
+    ${row('Wire Diameter', wireDia + ' mm')}
+    ${row('Spring Index (C)', springIndex.toFixed(2))}
+    ${row('Wahl Factor (Kw)', wahl.toFixed(3))}
+    ${row('Required FOS', fos)}
+    ${row('Raw Shear Stress', rawStress.toFixed(2) + ' MPa')}
+    ${row('Corrected Shear Stress', correctedStress.toFixed(2) + ' MPa', true)}
+    ${row('Allowable Stress', allowable.toFixed(2) + ' MPa')}
+    ${row('Actual FOS', actualFos.toFixed(2), true)}
+    ${titleBlock('Spring', matName, actualFos.toFixed(2), safe?'safe':'fail', safe?'SAFE DESIGN':'DESIGN NOT SAFE')}
+    ${warningHtml}
+    <div class="note">Note: This simplified spring calculation is a static stress check. Actual spring-wire strength depends on material grade, wire diameter, manufacturing process, and condition. Fatigue life is not evaluated.</div>
+  </div>`;
+}
+
+// ---------------- 5. FAILURE ANALYSIS ----------------
+function calcFailure(){
+  const matName = document.getElementById('failMat').value;
+  const stress = parseFloat(document.getElementById('failStress').value);
+  const out = document.getElementById('failResult');
+  if(isNaN(stress) || stress<=0){ out.innerHTML = '<div class="result-empty">Enter a valid positive applied stress.</div>'; return; }
+
+  const yieldS = materials[matName].yield_strength;
+  const fos = yieldS / stress;
+  const st = fosStatus(fos);
+
+  out.innerHTML = `<div class="spec-card report"><span class="cb1"></span><span class="cb2"></span>
+    <div class="report-head"><h3>Failure Analysis</h3><span class="status-pill ${st.cls}">${st.label}</span></div>
+    ${row('Material', matName)}
+    ${row('Applied Stress', stress + ' MPa')}
+    ${row('Yield Strength', yieldS + ' MPa')}
+    ${row('Factor of Safety', fos.toFixed(2), true)}
+    ${titleBlock('Failure Check', matName, fos.toFixed(2), st.cls, st.label)}
+  </div>`;
+}
+
+// ---------------- 6. MATERIAL ANALYSIS ----------------
+function calcMaterialAnalysis(){
+  const matName = document.getElementById('manMat').value;
+  const stress = parseFloat(document.getElementById('manStress').value);
+  const out = document.getElementById('manResult');
+  if(isNaN(stress) || stress<=0){ out.innerHTML = '<div class="result-empty">Enter a valid positive applied stress.</div>'; return; }
+
+  const m = materials[matName];
+  const fos = m.yield_strength / stress;
+  const st = fosStatus(fos);
+
+  out.innerHTML = `<div class="spec-card report"><span class="cb1"></span><span class="cb2"></span>
+    <div class="report-head"><h3>Mechanical Analysis Report</h3><span class="status-pill ${st.cls}">${st.label}</span></div>
+    ${row('Material', matName)}
+    ${row('Yield Strength', m.yield_strength + ' MPa')}
+    ${row('Shear Strength', m.shear_strength + ' MPa')}
+    ${row('Density', m.density + ' kg/m³')}
+    ${row("Young's Modulus", m.youngs_modulus.toLocaleString() + ' MPa')}
+    ${row('Applied Stress', stress + ' MPa')}
+    ${row('Factor of Safety', fos.toFixed(2), true)}
+    ${titleBlock('Material Analysis', matName, fos.toFixed(2), st.cls, st.label)}
+  </div>`;
+}
+</script>
+</body>
+</html>
